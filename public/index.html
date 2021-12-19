@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script
+      type="text/javascript"
+      src="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.js"
+    ></script>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.css"
+    />
+    <script src="https://cdn.plot.ly/plotly-2.6.3.min.js"></script>
+  </head>
+  <body>
+    <form id="form" enctype="multipart/form-data">
+      <div>
+        <label>Select your file:</label>
+        <input id="excel-file" type="file" name="excel-file" />
+        <button type="submit">Upload</button>
+      </div>
+    </form>
+    <button id="get-worksheets">Show Worksheets</button>
+    <div id="holder-selection" hidden="true">
+      <select id="select"></select>
+      <button id="select-button">Select</button>
+    </div>
+    <div id="graph-selection" hidden="true">
+      <select id="data-a"></select>
+      <select id="data-b"></select>
+      <button id="select-data-button">Select</button>
+    </div>
+    <div id="graph" style="width: 600px; height: 250px"></div>
+    <div id="table"></div>
+  </body>
+  <script>
+    const input = document.getElementById("excel-file");
+    const form = document.getElementById("form");
+    const buttonWorksheets = document.getElementById("get-worksheets");
+    const selectionDiv = document.getElementById("holder-selection");
+    const graphDiv = document.getElementById("graph-selection");
+
+    const worksheet = document.getElementById("select");
+    const dataA = document.getElementById("data-a");
+    const dataB = document.getElementById("data-b");
+    const dataButton = document.getElementById("select-data-button");
+
+    const selectButton = document.getElementById("select-button");
+
+    const formData = new FormData();
+    let id = localStorage.getItem("id");
+
+    let workSheets = [];
+    let excelJson;
+    let columns, columnJson;
+    let x, y;
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      upload(formData);
+    });
+
+    input.addEventListener("change", (e) => {
+      formData.append("excel-file", e.target.files[0]);
+    });
+
+    buttonWorksheets.addEventListener("click", () => getWorksheets());
+
+    selectButton.addEventListener("click", () => {
+      requestWorksheet(worksheet.value);
+      getColumns(worksheet.value);
+    });
+
+    dataButton.addEventListener("click", () => {
+      x = columnJson[dataA.value];
+      y = columnJson[dataB.value];
+      showGraph(x, y);
+    });
+
+    const getColumns = (name) => {
+      fetch(`/get-columns?id=${id}&name=${name}`)
+        .then((res) => res.json())
+        .then((res) => {
+          console.log(res);
+          columns = res;
+          showSelectionsCol();
+        });
+      fetch(`/get-column?id=${id}&name=${name}`)
+        .then((res) => res.json())
+        .then((res) => {
+          console.log(res);
+          columnJson = res;
+        });
+    };
+
+    const showSelectionsCol = () => {
+      columns.map((x, i) => {
+        let optionA = document.createElement("option");
+        optionA.value = x;
+        optionA.text = x;
+        let optionB = document.createElement("option");
+
+        optionB.value = x;
+        optionB.text = x;
+
+        dataA.appendChild(optionA);
+        dataB.appendChild(optionB);
+      });
+    };
+
+    const showWorksheets = () => {
+      workSheets.map((x) => {
+        let option = document.createElement("option");
+        option.value = x;
+        option.text = x;
+
+        worksheet.appendChild(option);
+      });
+      selectionDiv.hidden = false;
+    };
+
+    const requestWorksheet = (name) => {
+      fetch(`/get-worksheet?id=${id}&name=${name}`)
+        .then((res) => res.json())
+        .then((res) => {
+          excelJson = res;
+          console.log(res);
+          graphDiv.hidden = false;
+          // showTable();
+        });
+    };
+
+    const getWorksheets = () => {
+      console.log(localStorage.getItem("id"));
+      fetch(`/get-worksheets?id=${id}`, {
+        method: "GET",
+      })
+        .then((res) => res.json())
+        .then((res) => console.log(res));
+    };
+
+    const upload = (file) => {
+      console.log(file);
+      fetch("/upload-file", {
+        method: "POST",
+        body: file,
+      })
+        .then((res) => res.json())
+        .then((res) => {
+          localStorage.setItem("id", res.id);
+          workSheets = res.workSheets;
+          console.log(res);
+          worksheet.hidden = false;
+          showWorksheets();
+        });
+    };
+  </script>
+  <script>
+    const showTable = () => {
+      const data = excelJson.data;
+      const container = document.getElementById("table");
+      container.innerHTML = "";
+      const hot = new Handsontable(container, {
+        data: data,
+        rowHeaders: true,
+        colHeaders: true,
+        height: "auto",
+        licenseKey: "non-commercial-and-evaluation", // for non-commercial use only
+      });
+    };
+  </script>
+  <script>
+    const showGraph = (x, y) => {
+      let graph = document.getElementById("graph");
+      graph.innerHTML = "";
+      Plotly.newPlot(
+        graph,
+        [
+          {
+            x: x,
+            y: y,
+          },
+        ],
+        {
+          margin: { t: 0 },
+        }
+      );
+    };
+  </script>
+</html>
