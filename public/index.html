@@ -14,98 +14,56 @@
       href="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.css"
     />
     <script src="https://cdn.plot.ly/plotly-2.6.3.min.js"></script>
+    <script src="https://unpkg.com/vue@next"></script>
     <script src="js/requests.js"></script>
   </head>
   <body>
-    <form id="form" enctype="multipart/form-data">
-      <div>
-        <label>Select your file:</label>
-        <input id="excel-file" type="file" name="excel-file" />
-        <button type="submit">Upload</button>
+    <div id="app">
+      <form @submit.prevent="upload">
+        <div>
+          <label>Select your file:</label>
+          <input type="file" name="excel-file" @change="setFile" />
+          <button type="submit">Upload</button>
+        </div>
+      </form>
+
+      <div v-if="workSheets">
+        <select @click="getColumns($event.target.value)">
+          <option
+            v-for="(workSheet,index) in workSheets"
+            :key="index"
+            :value="workSheet"
+          >
+            {{index}} {{workSheet}}
+          </option>
+        </select>
       </div>
-    </form>
-    <button id="get-worksheets">Show Worksheets</button>
-    <div id="holder-selection" hidden="true">
-      <select id="select"></select>
-      <button id="select-button">Select</button>
+      <div v-if="columns">
+        <select v-model="x">
+          <option
+            v-for="(columnName,index) in columns"
+            :key="index"
+            :value="columnName"
+          >
+            {{index}} {{columnName}}
+          </option>
+        </select>
+        <select v-model="y">
+          <option
+            v-for="(columnName,index) in columns"
+            :key="index"
+            :value="columnName"
+          >
+            {{index}} {{columnName}}
+          </option>
+        </select>
+        <button @click="setXY()">lamao</button>
+      </div>
+
+      <div id="graph"></div>
     </div>
-    <div id="graph-selection" hidden="true">
-      <select id="data-a"></select>
-      <select id="data-b"></select>
-      <button id="select-data-button">Select</button>
-    </div>
-    <div id="graph" style="width: 600px; height: 250px"></div>
-    <div id="table"></div>
   </body>
-  <script>
-    const input = document.getElementById("excel-file");
-    const form = document.getElementById("form");
-    const buttonWorksheets = document.getElementById("get-worksheets");
-    const selectionDiv = document.getElementById("holder-selection");
-    const graphDiv = document.getElementById("graph-selection");
 
-    const worksheet = document.getElementById("select");
-    const dataA = document.getElementById("data-a");
-    const dataB = document.getElementById("data-b");
-    const dataButton = document.getElementById("select-data-button");
-
-    const selectButton = document.getElementById("select-button");
-
-    const formData = new FormData();
-    let id = localStorage.getItem("id");
-
-    let workSheets = [];
-    let excelJson;
-    let columns, columnJson;
-    let x, y;
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      upload(formData);
-    });
-
-    input.addEventListener("change", (e) => {
-      formData.append("excel-file", e.target.files[0]);
-    });
-
-    buttonWorksheets.addEventListener("click", () => getWorksheets());
-
-    selectButton.addEventListener("click", () => {
-      requestWorksheet(worksheet.value);
-      getColumns(worksheet.value);
-    });
-
-    dataButton.addEventListener("click", () => {
-      x = columnJson[dataA.value];
-      y = columnJson[dataB.value];
-      showGraph(x, y);
-    });
-
-    const showSelectionsCol = () => {
-      columns.map((x, i) => {
-        let optionA = document.createElement("option");
-        optionA.value = x;
-        optionA.text = x;
-        let optionB = document.createElement("option");
-
-        optionB.value = x;
-        optionB.text = x;
-
-        dataA.appendChild(optionA);
-        dataB.appendChild(optionB);
-      });
-    };
-
-    const showWorksheets = () => {
-      workSheets.map((x) => {
-        let option = document.createElement("option");
-        option.value = x;
-        option.text = x;
-
-        worksheet.appendChild(option);
-      });
-      selectionDiv.hidden = false;
-    };
-  </script>
   <script>
     const showTable = () => {
       const data = excelJson.data;
@@ -120,22 +78,93 @@
       });
     };
   </script>
+
   <script>
-    const showGraph = (x, y) => {
-      let graph = document.getElementById("graph");
-      graph.innerHTML = "";
-      Plotly.newPlot(
-        graph,
-        [
-          {
-            x: x,
-            y: y,
-          },
-        ],
-        {
-          margin: { t: 0 },
-        }
-      );
+    const app = {
+      data() {
+        return {
+          formData: new FormData(),
+          id: localStorage.getItem("id"),
+          workSheets: "",
+          columns: null,
+          cells: null,
+          x: undefined,
+          y: undefined,
+          isShowGraph: false,
+        };
+      },
+      methods: {
+        setFile(e) {
+          this.formData.append("excel-file", e.target.files[0]);
+        },
+        upload() {
+          console.log(this.formData);
+          fetch("/upload-file", {
+            method: "POST",
+            body: this.formData,
+          })
+            .then((res) => res.json())
+            .then((res) => {
+              localStorage.setItem("id", res.id);
+              this.workSheets = res.workSheets;
+              console.log(res);
+              // worksheet.hidden = false;
+              // showWorksheets();
+            });
+        },
+        getColumns(name) {
+          fetch(`/get-column?id=${this.id}&name=${name}`)
+            .then((res) => res.json())
+            .then((res) => {
+              console.log(res);
+              this.cells = res;
+            })
+            .then(() => {
+              let tempArr = [];
+              Object.keys(this.cells).forEach((key) => {
+                // console.log(key);
+                tempArr.push(key);
+              });
+              this.columns = tempArr;
+            })
+            .catch((error) => console.log(error));
+        },
+        requestWorksheet(name) {
+          fetch(`/get-worksheet?id=${id}&name=${name}`)
+            .then((res) => res.json())
+            .then((res) => {
+              excelJson = res;
+              console.log(res);
+              graphDiv.hidden = false;
+              // showTable();
+            });
+        },
+        setXY() {
+          console.log("hi");
+          let x = this.cells[this.x];
+          let y = this.cells[this.y];
+          this.showGraph(x, y);
+          // this.isShowGraph = true;
+        },
+        showGraph(x, y) {
+          let graph = document.getElementById("graph");
+          graph.innerHTML = "";
+          Plotly.newPlot(
+            graph,
+            [
+              {
+                x: x,
+                y: y,
+              },
+            ],
+            {
+              margin: { t: 0 },
+            }
+          );
+        },
+      },
     };
+
+    Vue.createApp(app).mount("#app");
   </script>
 </html>
