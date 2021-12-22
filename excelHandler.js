@@ -21,6 +21,9 @@ module.exports = class ExcelParser {
   }
 
   getColumns(name) {
+    console.log("====================================");
+    console.log(this.excelJson(name));
+    console.log("====================================");
     return this.excelJson(name).data[0].map((x) => x);
   }
 

@@ -15,7 +15,6 @@
     />
     <script src="https://cdn.plot.ly/plotly-2.6.3.min.js"></script>
     <script src="https://unpkg.com/vue@next"></script>
-    <script src="js/requests.js"></script>
   </head>
   <body>
     <div id="app">
@@ -58,6 +57,11 @@
           </option>
         </select>
         <button @click="setXY()">lamao</button>
+        <select v-model="graphType">
+          <option v-for="type in graphTypes" :key="type" :value="type">
+            {{type}}
+          </option>
+        </select>
       </div>
 
       <div id="graph"></div>
@@ -84,14 +88,74 @@
       data() {
         return {
           formData: new FormData(),
-          id: localStorage.getItem("id"),
           workSheets: "",
           columns: null,
           cells: null,
           x: undefined,
           y: undefined,
           isShowGraph: false,
+          graphType: "",
+          graphTypes: [
+            "aggregate",
+            "bar",
+            "barpolar",
+            "box",
+            "calendars",
+            "candlestick",
+            "carpet",
+            "choropleth",
+            "choroplethmapbox",
+            "cone",
+            "contour",
+            "contourcarpet",
+            "core",
+            "densitymapbox",
+            "filter",
+            "funnel",
+            "funnelarea",
+            "groupby",
+            "heatmap",
+            "heatmapgl",
+            "histogram",
+            "histogram2d",
+            "histogram2dcontour",
+            "icicle",
+            "image",
+            "indicator",
+            "isosurface",
+            "mesh3d",
+            "ohlc",
+            "parcats",
+            "parcoords",
+            "pie",
+            "pointcloud",
+            "sankey",
+            "scatter3d",
+            "scattercarpet",
+            "scattergeo",
+            "scattergl",
+            "scattermapbox",
+            "scatterpolar",
+            "scatterpolargl",
+            "scattersmith",
+            "scatterternary",
+            "sort",
+            "splom",
+            "streamtube",
+            "sunburst",
+            "surface",
+            "table",
+            "treemap",
+            "violin",
+            "volume",
+            "waterfall",
+          ],
         };
+      },
+      computed: {
+        id() {
+          return localStorage.getItem("id");
+        },
       },
       methods: {
         setFile(e) {
@@ -155,6 +219,7 @@
               {
                 x: x,
                 y: y,
+                type: this.graphType,
               },
             ],
             {
@@ -167,4 +232,5 @@
 
     Vue.createApp(app).mount("#app");
   </script>
+  <script></script>
 </html>

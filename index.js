@@ -59,7 +59,7 @@ app.get("/get-column", (req, res) => {
   const { id, name } = req.query;
 
   console.log("heres the query id", id, name);
-
+  console.log(userExcels);
   res.json(userExcels.get(id).getColumn(name));
 });
 
